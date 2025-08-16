@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LexiMind - AI Legal Document Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .panel-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 15px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 20px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .panel h2 {
+            color: #4a5568;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .upload-area {
+            border: 3px dashed #cbd5e0;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .upload-area.drag-over {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #a0aec0;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            color: #4a5568;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .text-area {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        .text-area:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .analysis-section {
+            grid-column: 1 / -1;
+            margin-top: 20px;
+        }
+
+        .analysis-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            border-left: 5px solid #667eea;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            line-height: 1.7;
+        }
+
+        .analysis-content h3, .analysis-content h4 {
+            color: #2d3748;
+            margin: 20px 0 10px 0;
+        }
+
+        .analysis-content ul {
+            margin: 10px 0 10px 20px;
+        }
+
+        .analysis-content li {
+            margin-bottom: 8px;
+        }
+
+        .analysis-content strong {
+            color: #2d3748;
+        }
+
+        .qa-section {
+            grid-column: 1 / -1;
+            margin-top: 20px;
+        }
+
+        .question-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .question-input input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .question-input input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .qa-history {
+            space-y: 15px;
+        }
+
+        .qa-item {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid #667eea;
+        }
+
+                /* --- Add these new styles for the history container --- */
+        .qa-history-container {
+            margin-top: 30px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 20px;
+            /* Prevents the panel from becoming too tall */
+            max-height: 450px;
+            overflow-y: auto;
+        }
+
+        .qa-history-container h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .question {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .answer {
+            color: #4a5568;
+            line-height: 1.6;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid;
+        }
+
+        .alert-error {
+            background: #fed7d7;
+            border-color: #e53e3e;
+            color: #c53030;
+        }
+
+        .alert-success {
+            background: #c6f6d5;
+            border-color: #38a169;
+            color: #2f855a;
+        }
+
+        .alert-info {
+            background: #bee3f8;
+            border-color: #3182ce;
+            color: #2c5282;
+        }
+
+        .file-info {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+
+        /* --- New Styles for Analysis Dashboard --- */
+        .analysis-dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .analysis-card {
+            background-color: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px 20px;
+            background-color: #fff;
+            border-bottom: 1px solid #e2e8f0;
+            color: #2d3748;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .card-header .icon {
+            font-size: 1.5rem;
+        }
+
+        .card-content {
+            padding: 20px;
+            line-height: 1.7;
+            flex-grow: 1; /* Allows card to grow */
+        }
+
+        .card-content h3, .card-content h4 {
+            color: #2d3748;
+            margin: 15px 0 8px 0;
+        }
+
+        .card-content ul {
+            list-style-position: inside;
+            padding-left: 5px;
+        }
+
+        .card-content li {
+            margin-bottom: 8px;
+        }
+
+        .card-content strong {
+            color: #2d3748;
+        }
+
+        .card-content .placeholder {
+            color: #718096;
+            font-style: italic;
+        }
+
+        /* Special styling for the Red Flags card */
+        .card--danger {
+            border-left: 5px solid #e53e3e;
+            background-color: #fff5f5; /* Light red background */
+        }
+
+        .card--danger .card-header {
+            color: #c53030;
+        }
+
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .panel {
+                padding: 20px;
+            }
+
+            .question-input {
+                flex-direction: column;
+            }
+
+            .controls {
+                justify-content: center;
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .tab-buttons {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .tab-button {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 1rem;
+            color: #718096;
+            transition: all 0.3s ease;
+        }
+
+        .tab-button.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 600;
+        }
+
+        .tab-button:hover {
+            color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧠 LexiMind</h1>
+            <p>AI-Powered Legal Document Analyzer</p>
+            <p>Transform complex legal documents into clear, plain-language insights</p>
+        </div>
+
+        <div class="main-content">
+            <div class="panel">
+                <h2>📄 Document Input</h2>
+                
+                <div class="tab-buttons">
+                    <button class="tab-button active" onclick="switchTab('upload-tab')">Upload File</button>
+                    <button class="tab-button" onclick="switchTab('text-tab')">Paste Text</button>
+                </div>
+
+                <div id="upload-tab" class="tab-content active">
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">📁</div>
+                        <div class="upload-text">Click to upload or drag & drop</div>
+                        <div class="upload-subtext">PDF or TXT files (max 16MB)</div>
+                    </div>
+                    <input type="file" id="fileInput" accept=".pdf,.txt">
+                    
+                    <div class="file-info" id="fileInfo">
+                        <strong>Selected file:</strong> <span id="fileName"></span><br>
+                        <strong>Size:</strong> <span id="fileSize"></span>
+                    </div>
+
+                    <div class="controls">
+                        <button class="btn" onclick="uploadFile()" id="uploadBtn">
+                            📤 Analyze Document
+                        </button>
+                        <button class="btn btn-secondary" onclick="loadSample()">
+                            📋 Load Sample
+                        </button>
+                    </div>
+                </div>
+
+                <div id="text-tab" class="tab-content">
+                    <textarea class="text-area" id="documentText" placeholder="Paste your legal document text here..."></textarea>
+                    <div class="controls">
+                        <button class="btn" onclick="analyzeText()">
+                            🔍 Analyze Text
+                        </button>
+                        <button class="btn btn-secondary" onclick="loadSample()">
+                            📋 Load Sample
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearText()">
+                            🗑️ Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title-row">
+                    <h2>💬 Ask Questions</h2>
+                    <button class="btn btn-secondary" onclick="clearSession()">
+                        🔄 New Session
+                    </button>
+                </div>
+                
+                <div class="question-input">
+                    <input type="text" id="questionInput" placeholder="Ask a question about the document..." disabled>
+                    <button class="btn" onclick="askQuestion()" id="askBtn" disabled>Ask</button>
+                </div>
+
+                <!-- MODIFICATION: Q&A history now lives inside this panel -->
+                <div class="qa-history-container hidden" id="qaHistoryContainer">
+                    <h3>💡 Q&A History</h3>
+                    <div class="qa-history" id="qaHistory"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <span id="loadingText">Processing document...</span>
+        </div>
+
+        <div id="alerts"></div>
+
+        <div class="analysis-section panel hidden" id="analysisSection">
+            <h2>📊 Document Analysis</h2>
+            
+            <!-- New Card-based Dashboard Layout -->
+            <div class="analysis-dashboard">
+                <!-- Card 1: Plain English Summary -->
+                <div class="analysis-card">
+                    <h3 class="card-header">
+                        <span class="icon">📜</span>
+                        Plain English Summary
+                    </h3>
+                    <div id="summaryContent" class="card-content">
+                        <p class="placeholder">No summary generated.</p>
+                    </div>
+                </div>
+
+                <!-- Card 2: Key Clauses & Highlights -->
+                <div class="analysis-card">
+                    <h3 class="card-header">
+                        <span class="icon">🔑</span>
+                        Key Clauses & Highlights
+                    </h3>
+                    <div id="clausesContent" class="card-content">
+                        <p class="placeholder">No key clauses identified.</p>
+                    </div>
+                </div>
+
+                <!-- Card 3: Risks & Red Flags -->
+                <div class="analysis-card card--danger">
+                    <h3 class="card-header">
+                        <span class="icon">🚩</span>
+                        Risks & Red Flags
+                    </h3>
+                    <div id="redFlagsContent" class="card-content">
+                        <p class="placeholder">Good news! No major red flags were detected.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFile = null;
+        let hasDocument = false;
+
+        // Tab switching
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // File upload handling
+        document.getElementById('uploadArea').addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+
+        document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+
+        // Drag and drop
+        const uploadArea = document.getElementById('uploadArea');
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect({ target: { files } });
+            }
+        });
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                currentFile = file;
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('fileSize').textContent = formatFileSize(file.size);
+                document.getElementById('fileInfo').classList.add('show');
+                document.getElementById('uploadBtn').disabled = false;
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Upload file
+        async function uploadFile() {
+            if (!currentFile) {
+                showAlert('Please select a file first.', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', currentFile);
+
+            showLoading('Analyzing document...');
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                hideLoading();
+
+                if (data.success) {
+                    showAlert(`Document "${data.filename}" analyzed successfully!`, 'success');
+                    displayAnalysis(data.analysis);
+                    enableQA();
+                } else {
+                    showAlert(data.error || 'Error analyzing document', 'error');
+                }
+            } catch (error) {
+                hideLoading();
+                showAlert('Network error. Please try again.', 'error');
+            }
+        }
+
+        // Analyze text
+        async function analyzeText() {
+            const text = document.getElementById('documentText').value.trim();
+            
+            if (!text) {
+                showAlert('Please enter document text first.', 'error');
+                return;
+            }
+
+            showLoading('Analyzing document...');
+
+            try {
+                const response = await fetch('/analyze_text', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ document_text: text })
+                });
+
+                const data = await response.json();
+                hideLoading();
+
+                if (data.success) {
+                    showAlert('Document analyzed successfully!', 'success');
+                    displayAnalysis(data.analysis);
+                    enableQA();
+                } else {
+                    showAlert(data.error || 'Error analyzing document', 'error');
+                }
+            } catch (error) {
+                hideLoading();
+                showAlert('Network error. Please try again.', 'error');
+            }
+        }
+
+        // Ask question
+        async function askQuestion() {
+            const question = document.getElementById('questionInput').value.trim();
+            
+            if (!question) {
+                showAlert('Please enter a question.', 'error');
+                return;
+            }
+
+            showLoading('Finding answer...');
+
+            try {
+                const response = await fetch('/ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ question })
+                });
+
+                const data = await response.json();
+                hideLoading();
+
+                if (data.success) {
+                    addQAItem(question, data.answer);
+                    document.getElementById('questionInput').value = '';
+                } else {
+                    showAlert(data.error || 'Error answering question', 'error');
+                }
+            } catch (error) {
+                hideLoading();
+                showAlert('Network error. Please try again.', 'error');
+            }
+        }
+
+        // Load sample document
+        async function loadSample() {
+            try {
+                const response = await fetch('/sample_document');
+                const data = await response.json();
+                
+                document.getElementById('documentText').value = data.sample_document;
+                switchTab('text-tab');
+                document.querySelector('[onclick="switchTab(\'text-tab\')"]').classList.add('active');
+                document.querySelector('[onclick="switchTab(\'upload-tab\')"]').classList.remove('active');
+                
+                showAlert('Sample document loaded! Click "Analyze Text" to proceed.', 'info');
+            } catch (error) {
+                showAlert('Error loading sample document.', 'error');
+            }
+        }
+
+        // Clear session
+        async function clearSession() {
+            if (confirm('Are you sure you want to start a new session? This will clear all analysis and Q&A history.')) {
+                try {
+                    await fetch('/clear_session', { method: 'POST' });
+                    location.reload();
+                } catch (error) {
+                    showAlert('Error clearing session.', 'error');
+                }
+            }
+        }
+
+        // Clear text
+        function clearText() {
+            document.getElementById('documentText').value = '';
+        }
+
+        // Display analysis
+        function displayAnalysis(analysisObject) {
+            // The 'analysisObject' is now the JSON object like:
+            // { summary: "...", clauses: "...", flags: "..." }
+
+            const summaryEl = document.getElementById('summaryContent');
+            const clausesEl = document.getElementById('clausesContent');
+            const redFlagsEl = document.getElementById('redFlagsContent');
+
+            const summaryContent = analysisObject.summary || '';
+            const clausesContent = analysisObject.clauses || '';
+            const redFlagsContent = analysisObject.flags || '';
+
+            // Populate the cards, using the placeholder if content is empty
+            summaryEl.innerHTML = summaryContent.trim() ? formatMarkdown(summaryContent) : '<p class="placeholder">No summary was generated.</p>';
+            clausesEl.innerHTML = clausesContent.trim() ? formatMarkdown(clausesContent) : '<p class="placeholder">No specific clauses were highlighted.</p>';
+            
+            // Special check for red flags placeholder
+            const noFlagsMessage = "No significant red flags were detected.";
+            if (redFlagsContent.trim() && redFlagsContent.trim() !== noFlagsMessage) {
+                redFlagsEl.innerHTML = formatMarkdown(redFlagsContent);
+            } else {
+                redFlagsEl.innerHTML = `<p class="placeholder">Good news! ${noFlagsMessage}</p>`;
+            }
+            
+            // Show the analysis section and enable Q&A
+            document.getElementById('analysisSection').classList.remove('hidden');
+            hasDocument = true;
+        }
+
+        // formatMarkdown function (No changes needed from last time, but include for completeness)
+        function formatMarkdown(text) {
+            let escapedText = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+
+            return escapedText
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/^### (.*$)/gm, '<h4>$1</h4>')
+                .replace(/^## (.*$)/gm, '<h3>$1</h3>')
+                .replace(/^# (.*$)/gm, '<h2>$1</h2>')
+                .replace(/🚩/g, '<span style="color: #e53e3e; font-weight: bold;">🚩</span>')
+                .replace(/\n/g, '<br>');
+        }
+
+        // Add Q&A item
+        function addQAItem(question, answer) {
+            const qaHistory = document.getElementById('qaHistory');
+            const qaHistoryContainer = document.getElementById('qaHistoryContainer');
+            const qaItem = document.createElement('div');
+            
+            qaItem.className = 'qa-item';
+            qaItem.innerHTML = `
+                <div class="question">Q: ${escapeHtml(question)}</div>
+                <div class="answer">${formatMarkdown(answer)}</div>
+            `;
+
+            // Use prepend to add the newest question to the top
+            qaHistory.prepend(qaItem);
+            
+            // Show the container if it's hidden
+            qaHistoryContainer.classList.remove('hidden');
+
+            // Scroll to the top of the history list to show the new answer
+            qaHistoryContainer.scrollTop = 0;
+        }
+
+        // Enable Q&A
+        function enableQA() {
+            document.getElementById('questionInput').disabled = false;
+            document.getElementById('askBtn').disabled = false;
+        }
+
+        // Utility functions
+        function showLoading(text) {
+            document.getElementById('loadingText').textContent = text;
+            document.getElementById('loading').classList.add('show');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('show');
+        }
+
+        function showAlert(message, type) {
+            const alertsContainer = document.getElementById('alerts');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            
+            alertsContainer.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatMarkdown(text) {
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/^### (.*$)/gm, '<h4>$1</h4>')
+                .replace(/^## (.*$)/gm, '<h3>$1</h3>')
+                .replace(/^# (.*$)/gm, '<h2>$1</h2>')
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/^(.*)$/gm, '<p>$1</p>')
+                .replace(/<p><\/p>/g, '')
+                .replace(/🚩/g, '<span style="color: #e53e3e;">🚩</span>');
+        }
+
+        // Enter key handling
+        document.getElementById('questionInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                askQuestion();
+            }
+        });
+
+        // Load status on page load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('/get_status');
+                const data = await response.json();
+                
+                if (data.has_document && data.analysis) {
+                    displayAnalysis(data.analysis);
+                    enableQA();
+                    
+                    // Load Q&A history
+                    data.history.forEach(item => {
+                        addQAItem(item.question, item.answer);
+                    });
+                }
+            } catch (error) {
+                console.log('No previous session found');
+            }
+        });
+    </script>
+</body>
+</html>
